@@ -1,24 +1,61 @@
 import logo from './logo.svg';
+
 import './App.css';
+import React, {useEffect, useState} from "react";
+import {Card, Progress, Row} from "antd";
 
 function App() {
+
+  const [listening, setListening] = useState(false);
+  const [data, setData] = useState({value: 0, target: 100});
+  let eventSource = undefined;
+
+  useEffect(() => {
+    if (!listening) {
+      eventSource = new EventSource("http://localhost:8085/run");
+
+      eventSource.addEventListener("Progress", (event) => {
+        const result = JSON.parse(event.data);
+        console.log("received:", result);
+        setData(result)
+      });
+
+      eventSource.onerror = (event) => {
+        console.log(event.target.readyState)
+        if (event.target.readyState === EventSource.CLOSED) {
+          console.log('SSE closed (' + event.target.readyState + ')')
+        }
+        eventSource.close();
+      }
+
+      eventSource.onopen = (event) => {
+        console.log("connection opened")
+      }
+      setListening(true);
+    }
+    return () => {
+      eventSource.close();
+      console.log("event closed")
+    }
+
+  }, [])
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+
+    <>
+      <Card title="Progress Circle">
+        <Row justify="center">
+          <Progress type="circle" percent={data.value / data.target * 100}/>
+        </Row>
+      </Card>
+      <Card title="Progress Line">
+        <Row justify="center">
+          <Progress percent={data.value / data.target * 100} />
+        </Row>
+      </Card>
+    </>
+
+
   );
 }
 
